@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <!-- ***** FAVICON (from images/) ***** -->
+  <link rel="icon" type="image/x-icon" href="images/favicon.ico">
+  <link rel="apple-touch-icon" href="images/favicon.png">
+
+  <!-- ***** PWA MANIFEST ***** -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- ***** iOS SPECIFIC META ***** -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Tasbih Counter">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+
+  <!-- ***** TOP‑LEVEL SEO ***** -->
+  <title>Tasbih Counter · Digital Dhikr Beads</title>
+  <meta name="description" content="Beautiful, minimal tasbih counter with circular progress, target rounds & haptic feedback.">
+  <meta name="keywords" content="tasbih, counter, digital tasbih, dhikr, islamic counter, zikr, beads, target, modal">
+  <meta name="author" content="Your Ibadah">
+  <meta name="theme-color" content="#f7c948">
+  <meta property="og:title" content="Tasbih · styled target modal">
+  <meta property="og:description" content="Track your dhikr with elegance – circular progress, target rounds & smooth haptics.">
+  <meta property="og:type" content="website">
+
+  <!-- Google fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Amiri:wght@700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --accent: #f7c948;
+  --text: #f7c948;
+  --percent-bg: #161b22;
+  --modal-overlay: rgba(0,0,0,0.7);
+}
+
+body.light {
+  --bg: #ffffff;
+  --card: #f5f5f5;
+  --accent: #2e7d32;
+  --text: #2e7d32;
+  --percent-bg: #f0f7f0;
+  --modal-overlay: rgba(0,0,0,0.3);
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body{
+  background:var(--bg);
+  font-family:'Amiri', serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  transition:0.3s;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.app{
+  width:100%;
+  max-width:420px;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  padding:14px 16px 22px;
+}
+
+.top-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.spacer{width:48px;visibility:hidden;}
+
+.zikr{
+  font-size:24px;
+  font-weight:700;
+  color:var(--accent);
+  text-align:center;
+  flex:1;
+  user-select: text;
+}
+
+.theme-toggle{
+  background:var(--card);
+  color:var(--accent);
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:26px;
+  cursor:pointer;
+  border:1px solid var(--accent);
+}
+
+.middle-section{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+}
+
+.circle-wrapper{
+  position:relative;
+  width:min(360px,80vw);
+  height:min(360px,80vw);
+}
+
+svg{
+  width:100%;
+  height:100%;
+  transform:rotate(-90deg);
+}
+
+circle{
+  fill:none;
+  stroke-width:12;
+}
+
+.bg{
+  stroke:var(--card);
+  opacity:0.6;
+}
+
+.progress{
+  stroke:var(--accent);
+  stroke-linecap:round;
+  transition:stroke-dashoffset 0.25s ease;
+}
+
+.tap-area{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  cursor:pointer;
+}
+
+.tap-area:active{
+  transform:scale(0.96);
+}
+
+.count{
+  font-size:clamp(52px,16vw,85px);
+  font-family:'Orbitron', sans-serif;
+  color:var(--accent);
+  text-shadow:0 0 12px var(--accent);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* ===== STATIC PERCENT (under the circle) ===== */
+.static-percent{
+  background:var(--percent-bg);
+  border:1px solid var(--accent);
+  padding:6px 20px;
+  border-radius:40px;
+  font-family:'Orbitron', sans-serif;
+  font-size:18px;
+  color:var(--accent);
+  margin-top:5px;
+  user-select: none;
+  display:inline-block;
+}
+
+.bottom-controls{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.stats-row{
+  display:flex;
+  justify-content:space-between;
+  background:var(--card);
+  padding:8px 20px;
+  border-radius:40px;
+  border:1px solid var(--accent);
+  font-family:'Orbitron', sans-serif;
+  color:var(--accent);
+  user-select: none;
+}
+
+.target-value{
+  background:var(--bg);
+  padding:4px 16px;
+  border-radius:30px;
+  border:1px solid var(--accent);
+}
+
+.icon-box{
+  display:flex;
+  justify-content:space-around;
+  background:var(--card);
+  border:1px solid var(--accent);
+  border-radius:60px;
+  padding:6px 12px;
+}
+
+.icon-btn{
+  background:none;
+  border:none;
+  color:var(--accent);
+  font-size:40px;
+  width:70px;
+  height:60px;
+  cursor:pointer;
+  user-select: none;
+}
+
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:var(--modal-overlay);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  opacity:0;
+  visibility:hidden;
+  transition:0.2s;
+}
+
+.modal-overlay.show{
+  opacity:1;
+  visibility:visible;
+}
+
+.modal-card{
+  background:var(--card);
+  border:2px solid var(--accent);
+  border-radius:40px;
+  padding:28px;
+  width:280px;
+  text-align:center;
+  font-family:'Orbitron', sans-serif;
+  color:var(--accent);
+}
+
+.modal-input{
+  width:100%;
+  padding:12px;
+  border-radius:30px;
+  border:2px solid var(--accent);
+  background:var(--bg);
+  color:var(--accent);
+  font-size:18px;
+  text-align:center;
+  margin:15px 0;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.modal-btn{
+  padding:10px 20px;
+  border-radius:30px;
+  border:2px solid var(--accent);
+  background:var(--accent);
+  color:var(--bg);
+  cursor:pointer;
+  user-select: none;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<div class="top-row">
+<div class="spacer"></div>
+<div class="zikr">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ</div>
+<div class="theme-toggle" id="themeToggle" onclick="toggleLightDark()">🌙</div>
+</div>
+
+<div class="middle-section">
+<div class="circle-wrapper">
+
+<svg viewBox="0 0 300 300">
+<circle class="bg" cx="150" cy="150" r="130"></circle>
+<circle class="progress" cx="150" cy="150" r="130"
+stroke-dasharray="817" stroke-dashoffset="817"
+id="progressCircle"></circle>
+</svg>
+
+<div class="tap-area" onclick="increment()">
+<div class="count" id="count">0</div>
+</div>
+
+</div> <!-- circle-wrapper ends -->
+
+<!-- ===== PERCENTAGE BELOW CIRCLE ===== -->
+<div class="static-percent" id="staticPercent">0%</div>
+
+</div> <!-- middle-section ends -->
+
+<div class="bottom-controls">
+<div class="stats-row">
+<div>Rounds: <span id="rounds">0</span></div>
+<div class="target-value">Target: <span id="targetDisplay">33</span></div>
+</div>
+<div class="icon-box">
+<div class="icon-btn" onclick="reset()">↺</div>
+<div class="icon-btn" onclick="decrement()">−</div>
+<div class="icon-btn" onclick="showTargetModal()">🎯</div>
+</div>
+</div>
+
+<div class="modal-overlay" id="targetModal">
+<div class="modal-card">
+<h3>SET TARGET</h3>
+<input type="number" id="modalTargetInput" class="modal-input" value="33">
+<button class="modal-btn" onclick="setTargetFromModal()">OK</button>
+</div>
+</div>
+
+</div>
+
+<script>
+let count=0,target=33,rounds=0;
+
+const circle=document.getElementById("progressCircle");
+const staticPercent = document.getElementById("staticPercent"); // new element
+const themeToggle=document.getElementById("themeToggle");
+
+const circumference=2*Math.PI*130;
+circle.style.strokeDasharray=circumference;
+
+function updateUI(){
+  document.getElementById("count").innerText=count;
+  document.getElementById("rounds").innerText=rounds;
+  document.getElementById("targetDisplay").innerText=target;
+
+  let percent=(count/target)*100;
+  if(percent>100)percent=100;
+
+  // update static percent
+  staticPercent.innerText = Math.round(percent)+"%";
+  
+  // update circle progress
+  circle.style.strokeDashoffset=circumference-(percent/100)*circumference;
+
+  if(count>=target){
+    rounds++;
+    count=0;
+    updateUI();
+  }
+}
+
+function increment(){
+  count++;
+  if(navigator.vibrate)navigator.vibrate(20);
+  updateUI();
+}
+
+function decrement(){
+  if(count>0){count--;updateUI();}
+}
+
+function reset(){
+  count=0;rounds=0;updateUI();
+}
+
+function toggleLightDark(){
+  document.body.classList.toggle("light");
+  if(document.body.classList.contains("light")){
+    themeToggle.innerText="☀️";
+  }else{
+    themeToggle.innerText="🌙";
+  }
+}
+
+function showTargetModal(){
+  document.getElementById("targetModal").classList.add("show");
+}
+
+function setTargetFromModal(){
+  let val=parseInt(document.getElementById("modalTargetInput").value);
+  if(val>0){target=val;count=0;updateUI();}
+  document.getElementById("targetModal").classList.remove("show");
+}
+
+updateUI();
+
+// Prevent context menu / long press selection on numbers
+document.querySelectorAll('.count, .stats-row, .icon-btn, .static-percent').forEach(el => {
+  el.addEventListener('contextmenu', (e) => e.preventDefault());
+  el.addEventListener('dragstart', (e) => e.preventDefault());
+});
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('Service Worker registered!', reg))
+      .catch(err => console.log('Service Worker registration failed: ', err));
+  });
+}
+</script>
+
+</body>
+</html>
