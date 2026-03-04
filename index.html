@@ -14,16 +14,16 @@
   <!-- ***** iOS SPECIFIC META ***** -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Tasbih Counter">
+  <meta name="apple-mobile-web-app-title" content="Tasbih · Digital Zikr">
   <link rel="apple-touch-icon" href="images/icon-192.png">
 
   <!-- ***** TOP‑LEVEL SEO ***** -->
-  <title>Tasbih Counter · Digital Dhikr Beads</title>
+  <title>Tasbih · Digital Zikr</title>
   <meta name="description" content="Beautiful, minimal tasbih counter with circular progress, target rounds & haptic feedback.">
   <meta name="keywords" content="tasbih, counter, digital tasbih, dhikr, islamic counter, zikr, beads, target, modal">
   <meta name="author" content="Your Ibadah">
   <meta name="theme-color" content="#f7c948">
-  <meta property="og:title" content="Tasbih · Digital Dhikr">
+  <meta property="og:title" content="Tasbih · Digital Zikr">
   <meta property="og:description" content="Track your dhikr with elegance – circular progress, target rounds & smooth haptics.">
   <meta property="og:type" content="website">
 
@@ -38,6 +38,7 @@
   --text: #f7c948;
   --percent-bg: #161b22;
   --modal-overlay: rgba(0,0,0,0.7);
+  --glow-color: rgba(247, 201, 72, 0.9);
 }
 
 body.light {
@@ -45,8 +46,9 @@ body.light {
   --card: #f5f5f5;
   --accent: #2e7d32;
   --text: #2e7d32;
-  --percent-bg: #f0f7f0;
-  --modal-overlay: rgba(0,0,0,0.3);
+  --percent-bg: #e8f5e9;
+  --modal-overlay: rgba(0,0,0,0.2);
+  --glow-color: rgba(46, 125, 50, 0.9);
 }
 
 *{
@@ -96,6 +98,7 @@ body{
   user-select: text;
 }
 
+/* Theme toggle - perfect centering */
 .theme-toggle{
   background:var(--card);
   color:var(--accent);
@@ -108,6 +111,9 @@ body{
   font-size:26px;
   cursor:pointer;
   border:1px solid var(--accent);
+  line-height:1;
+  padding:0;
+  text-align:center;
 }
 
 .middle-section{
@@ -116,13 +122,13 @@ body{
   flex-direction:column;
   justify-content:center;
   align-items:center;
-  gap:10px;
+  gap:0;
 }
 
 .circle-wrapper{
   position:relative;
-  width:min(360px,80vw);
-  height:min(360px,80vw);
+  width:min(420px, 90vw);
+  height:min(420px, 90vw);
 }
 
 svg{
@@ -155,10 +161,43 @@ circle{
   justify-content:center;
   align-items:center;
   cursor:pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .tap-area:active{
   transform:scale(0.96);
+}
+
+/* Welcome glow animation (2 pulses) */
+@keyframes glowPulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--glow-color);
+  }
+  50% {
+    box-shadow: 0 0 30px 15px var(--glow-color);
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--glow-color);
+  }
+}
+.glow-pulse {
+  animation: glowPulse 1s ease 2;
+}
+
+/* Smooth tap glow for infinite mode */
+@keyframes smoothTapGlow {
+  0% {
+    box-shadow: 0 0 0 0 var(--glow-color);
+  }
+  30% {
+    box-shadow: 0 0 25px 12px var(--glow-color);
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--glow-color);
+  }
+}
+.tap-glow {
+  animation: smoothTapGlow 0.2s ease-out;
 }
 
 .count{
@@ -192,23 +231,24 @@ circle{
   gap:10px;
 }
 
+/* Stats row - gap minimum */
 .stats-row{
   display:flex;
   justify-content:space-between;
-  background:var(--card);
-  padding:8px 20px;
-  border-radius:40px;
-  border:1px solid var(--accent);
   font-family:'Orbitron', sans-serif;
   color:var(--accent);
   user-select: none;
+  font-size:16px;
+  width:100%;
+  padding:0 2px;
+  letter-spacing: -0.8px;
 }
 
-.target-value{
-  background:var(--bg);
-  padding:4px 16px;
-  border-radius:30px;
-  border:1px solid var(--accent);
+/* Rounds aur target ke beech extra margin zero */
+.stats-row div:first-child,
+.stats-row div:last-child {
+  margin:0;
+  padding:0;
 }
 
 .icon-box{
@@ -313,7 +353,7 @@ stroke-dasharray="817" stroke-dashoffset="817"
 id="progressCircle"></circle>
 </svg>
 
-<div class="tap-area" onclick="increment()">
+<div class="tap-area" id="tapArea" onclick="increment()">
 <div class="count" id="count">0</div>
 </div>
 
@@ -327,7 +367,7 @@ id="progressCircle"></circle>
 <div class="bottom-controls">
 <div class="stats-row">
 <div>Rounds: <span id="rounds">0</span></div>
-<div class="target-value">Target: <span id="targetDisplay">∞</span></div>
+<div>Target: <span id="targetDisplay">∞</span></div>
 </div>
 <div class="icon-box">
 <div class="icon-btn" onclick="reset()">↺</div>
@@ -347,16 +387,18 @@ id="progressCircle"></circle>
 </div>
 </div>
 
-</div>
+</div> <!-- app ends -->
 
 <script>
 let count = 0;
-let target = Infinity;    // default infinite
+let target = Infinity;
 let rounds = 0;
+let glowTimeout = null; // track previous timeout
 
 const circle = document.getElementById("progressCircle");
 const staticPercent = document.getElementById("staticPercent");
 const themeToggle = document.getElementById("themeToggle");
+const tapArea = document.getElementById("tapArea");
 
 const circumference = 2 * Math.PI * 130;
 circle.style.strokeDasharray = circumference;
@@ -365,13 +407,12 @@ function updateUI() {
   document.getElementById("count").innerText = count;
   document.getElementById("rounds").innerText = rounds;
 
-  // Target display: ∞ if infinite, else number
   const targetSpan = document.getElementById("targetDisplay");
   targetSpan.innerText = (target === Infinity) ? "∞" : target;
 
   let percent;
   if (target === Infinity) {
-    percent = 0;   // no target → progress bar stays at 0%
+    percent = 0;
   } else {
     percent = (count / target) * 100;
     if (percent > 100) percent = 100;
@@ -380,17 +421,41 @@ function updateUI() {
   staticPercent.innerText = Math.round(percent) + "%";
   circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
 
-  // Rounds increment only if target is finite and count reached target
   if (target !== Infinity && count >= target) {
     rounds++;
     count = 0;
-    updateUI();  // recursive call, but careful: count reset so condition false next time
+    updateUI();
   }
 }
 
 function increment() {
   count++;
   if (navigator.vibrate) navigator.vibrate(20);
+  
+  // GLOW FIX: har tap par glow guarantee
+  if (target === Infinity) {
+    // Pehle previous timeout clear karo
+    if (glowTimeout) {
+      clearTimeout(glowTimeout);
+      glowTimeout = null;
+    }
+    
+    // Pehle class hatao agar hai
+    tapArea.classList.remove('tap-glow');
+    
+    // Thoda delay do taaki browser remove effect process kar le
+    setTimeout(() => {
+      // Ab class add karo - animation fresh start hogi
+      tapArea.classList.add('tap-glow');
+      
+      // 200ms baad class hata do
+      glowTimeout = setTimeout(() => {
+        tapArea.classList.remove('tap-glow');
+        glowTimeout = null;
+      }, 200);
+    }, 10); // 10ms delay enough hai
+  }
+  
   updateUI();
 }
 
@@ -427,7 +492,6 @@ function setTargetFromModal() {
   document.getElementById("targetModal").classList.remove("show");
 }
 
-// New function to set target to infinite
 function setInfiniteTarget() {
   target = Infinity;
   count = 0;
@@ -435,15 +499,21 @@ function setInfiniteTarget() {
   document.getElementById("targetModal").classList.remove("show");
 }
 
+function showWelcomeMessage() {
+  tapArea.classList.add('glow-pulse');
+  setTimeout(() => {
+    tapArea.classList.remove('glow-pulse');
+  }, 2000);
+}
+
+window.addEventListener('load', showWelcomeMessage);
 updateUI();
 
-// Prevent context menu / long press selection on numbers
 document.querySelectorAll('.count, .stats-row, .icon-btn, .static-percent').forEach(el => {
   el.addEventListener('contextmenu', (e) => e.preventDefault());
   el.addEventListener('dragstart', (e) => e.preventDefault());
 });
 
-// Register service worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
