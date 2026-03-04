@@ -23,7 +23,7 @@
   <meta name="keywords" content="tasbih, counter, digital tasbih, dhikr, islamic counter, zikr, beads, target, modal">
   <meta name="author" content="Your Ibadah">
   <meta name="theme-color" content="#f7c948">
-  <meta property="og:title" content="Tasbih · styled target modal">
+  <meta property="og:title" content="Tasbih · Digital Dhikr">
   <meta property="og:description" content="Track your dhikr with elegance – circular progress, target rounds & smooth haptics.">
   <meta property="og:type" content="website">
 
@@ -275,6 +275,12 @@ circle{
   -ms-user-select: text;
 }
 
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
 .modal-btn{
   padding:10px 20px;
   border-radius:30px;
@@ -283,6 +289,7 @@ circle{
   color:var(--bg);
   cursor:pointer;
   user-select: none;
+  flex: 1;
 }
 </style>
 </head>
@@ -320,7 +327,7 @@ id="progressCircle"></circle>
 <div class="bottom-controls">
 <div class="stats-row">
 <div>Rounds: <span id="rounds">0</span></div>
-<div class="target-value">Target: <span id="targetDisplay">100</span></div>
+<div class="target-value">Target: <span id="targetDisplay">∞</span></div>
 </div>
 <div class="icon-box">
 <div class="icon-btn" onclick="reset()">↺</div>
@@ -332,74 +339,99 @@ id="progressCircle"></circle>
 <div class="modal-overlay" id="targetModal">
 <div class="modal-card">
 <h3>SET TARGET</h3>
-<input type="number" id="modalTargetInput" class="modal-input" value="100">
-<button class="modal-btn" onclick="setTargetFromModal()">OK</button>
+<input type="number" id="modalTargetInput" class="modal-input" value="33" placeholder="Enter number">
+<div class="modal-actions">
+  <button class="modal-btn" onclick="setTargetFromModal()">OK</button>
+  <button class="modal-btn" onclick="setInfiniteTarget()">∞</button>
+</div>
 </div>
 </div>
 
 </div>
 
 <script>
-let count=0,target=100,rounds=0;
+let count = 0;
+let target = Infinity;    // default infinite
+let rounds = 0;
 
-const circle=document.getElementById("progressCircle");
-const staticPercent = document.getElementById("staticPercent"); // new element
-const themeToggle=document.getElementById("themeToggle");
+const circle = document.getElementById("progressCircle");
+const staticPercent = document.getElementById("staticPercent");
+const themeToggle = document.getElementById("themeToggle");
 
-const circumference=2*Math.PI*130;
-circle.style.strokeDasharray=circumference;
+const circumference = 2 * Math.PI * 130;
+circle.style.strokeDasharray = circumference;
 
-function updateUI(){
-  document.getElementById("count").innerText=count;
-  document.getElementById("rounds").innerText=rounds;
-  document.getElementById("targetDisplay").innerText=target;
+function updateUI() {
+  document.getElementById("count").innerText = count;
+  document.getElementById("rounds").innerText = rounds;
 
-  let percent=(count/target)*100;
-  if(percent>100)percent=100;
+  // Target display: ∞ if infinite, else number
+  const targetSpan = document.getElementById("targetDisplay");
+  targetSpan.innerText = (target === Infinity) ? "∞" : target;
 
-  // update static percent
-  staticPercent.innerText = Math.round(percent)+"%";
-  
-  // update circle progress
-  circle.style.strokeDashoffset=circumference-(percent/100)*circumference;
+  let percent;
+  if (target === Infinity) {
+    percent = 0;   // no target → progress bar stays at 0%
+  } else {
+    percent = (count / target) * 100;
+    if (percent > 100) percent = 100;
+  }
 
-  if(count>=target){
+  staticPercent.innerText = Math.round(percent) + "%";
+  circle.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+
+  // Rounds increment only if target is finite and count reached target
+  if (target !== Infinity && count >= target) {
     rounds++;
-    count=0;
+    count = 0;
+    updateUI();  // recursive call, but careful: count reset so condition false next time
+  }
+}
+
+function increment() {
+  count++;
+  if (navigator.vibrate) navigator.vibrate(20);
+  updateUI();
+}
+
+function decrement() {
+  if (count > 0) {
+    count--;
     updateUI();
   }
 }
 
-function increment(){
-  count++;
-  if(navigator.vibrate)navigator.vibrate(20);
+function reset() {
+  count = 0;
+  rounds = 0;
   updateUI();
 }
 
-function decrement(){
-  if(count>0){count--;updateUI();}
-}
-
-function reset(){
-  count=0;rounds=0;updateUI();
-}
-
-function toggleLightDark(){
+function toggleLightDark() {
   document.body.classList.toggle("light");
-  if(document.body.classList.contains("light")){
-    themeToggle.innerText="☀️";
-  }else{
-    themeToggle.innerText="🌙";
-  }
+  themeToggle.innerText = document.body.classList.contains("light") ? "☀️" : "🌙";
 }
 
-function showTargetModal(){
+function showTargetModal() {
   document.getElementById("targetModal").classList.add("show");
 }
 
-function setTargetFromModal(){
-  let val=parseInt(document.getElementById("modalTargetInput").value);
-  if(val>0){target=val;count=0;updateUI();}
+function setTargetFromModal() {
+  const input = document.getElementById("modalTargetInput");
+  let val = parseInt(input.value);
+  if (!isNaN(val) && val > 0) {
+    target = val;
+    count = 0;
+    updateUI();
+  }
+  document.getElementById("targetModal").classList.remove("show");
+}
+
+// New function to set target to infinite
+function setInfiniteTarget() {
+  target = Infinity;
+  count = 0;
+  updateUI();
   document.getElementById("targetModal").classList.remove("show");
 }
 
